@@ -18,5 +18,6 @@ $ poetry run python main.py -c configs/<config-file-name.yaml>
 ## References
 
 - [Variational Autoencoder徹底解説 (in Japanese)](https://qiita.com/kenmatsu4/items/b029d697e9995d93aa24)
+- [多変量正規分布の場合のKullback Leibler Divergenceの導出 (in Japanese)](https://qiita.com/kenmatsu4/items/c107bd51503462fb677f)
 - [AntixK/PyTorch-VAE](https://github.com/AntixK/PyTorch-VAE)
 - [wiseodd/generative-models](https://github.com/wiseodd/generative-models)
