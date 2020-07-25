@@ -2,10 +2,10 @@ import math
 
 import torch
 from torch import optim
+from torch.utils.data import DataLoader
 
 import torchvision.utils as vutils
 from torchvision import transforms
-from torchvision.utils.data import DataLoader
 from torchvision.datasets import CelebA
 
 import pytorch_lightning as pl
@@ -22,22 +22,25 @@ class VAEExperiment(pl.LightningModule):
         self.params = params
         self.current_device = None
         RFB = "retain_first_backpass"
-        self.hold_graph = False if RFB not in self.params().keys() else self.params[RFB]
+        self.hold_graph = False if RFB not in self.params.keys() else self.params[RFB]
 
     def forward(self, input: Tensor, **kwargs) -> Tensor:
         return self.model(input, **kwargs)
 
     def training_step(self, batch, batch_idx, optimizer_idx=0):
-        return self._step(batch, batch_idx, optimizer_idx)  # loss
+        train_loss = self._step(batch, batch_idx, optimizer_idx, is_train=True)  # loss
+        self.logger.experiment.log({key: val.item() for key, val in train_loss.items()})
+        return train_loss
 
     def validation_step(self, batch, batch_idx, optimizer_idx=0):
-        return self._step(batch, batch_idx, optimizer_idx)  # loss
+        return self._step(batch, batch_idx, optimizer_idx, is_train=False)  # loss
 
-    def _step(self, batch, batch_idx, optimizer_idx=0):
+    def _step(self, batch, batch_idx, optimizer_idx=0, is_train=True):
         imgs, labels = batch
         self.current_device = imgs.device
         results = self.forward(imgs, labels=labels)
-        return self.model.loss_fn(*results, M_N=self.params["batch_size"] / self.num_train_imgs, optimizer_idx=optimizer_idx, batch_idx=batch_idx)
+        num_imgs = self.num_train_imgs if is_train else self.num_val_imgs
+        return self.model.loss_fn(*results, M_N=self.params["batch_size"] / num_imgs, optimizer_idx=optimizer_idx, batch_idx=batch_idx)
 
     def validation_end(self, outputs):
         avg_loss = torch.stack([x["loss"] for x in outputs]).mean()
@@ -51,7 +54,7 @@ class VAEExperiment(pl.LightningModule):
         self.sample_dataloader = self._get_dataloader(is_train=False)
         return self.sample_dataloader
 
-    def _get_dataloader(self, batch_size, is_train=True):
+    def _get_dataloader(self, is_train=True):
         transform = self.data_transforms()
         if self.params["dataset"] == "celeba":
             split = "train" if is_train else "test"
@@ -62,7 +65,7 @@ class VAEExperiment(pl.LightningModule):
             self.num_train_imgs = len(dataset)
         else:
             self.num_val_imgs = len(dataset)
-        return DataLoader(dataset, batch_size=self.params["batch_size"], shuffle=True, drop_last=True)
+        return DataLoader(dataset, batch_size=self.params["batch_size"], shuffle=is_train, drop_last=True)
 
     def data_transforms(self):
         SetRange = transforms.Lambda(lambda X: 2 * X - 1)
@@ -70,7 +73,7 @@ class VAEExperiment(pl.LightningModule):
         if self.params["dataset"] == "celeba":
             transform = transforms.Compose([
                 transforms.RandomHorizontalFlip(),
-                transforms.CentralCrop(148),
+                transforms.CenterCrop(148),
                 transforms.Resize(self.params["img_size"]),
                 transforms.ToTensor(),
                 SetRange

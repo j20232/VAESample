@@ -1,5 +1,4 @@
 import torch
-from torch.nn.modules.container import T
 from models import BaseVAE
 from torch import nn
 from torch.nn import functional as F
@@ -52,10 +51,10 @@ class VanillaVAE(BaseVAE):
             )
         self.decoder = nn.Sequential(*decoder_modules)
         self.final_layer = nn.Sequential(
-            nn.ConvTranspose2d(self.last_hdim, self.last_hdim, kernel_size=ksize, stride=stride, padding=padding, output_padding=output_padding),
-            nn.BatchNorm2d(self.last_hdim),
+            nn.ConvTranspose2d(hidden_dims[-1], hidden_dims[-1], kernel_size=ksize, stride=stride, padding=padding, output_padding=output_padding),
+            nn.BatchNorm2d(hidden_dims[-1]),
             nn.LeakyReLU(),
-            nn.Conv2d(self.last_hdim, out_channels=out_channels, kernel_size=ksize, stride=stride, padding=padding),
+            nn.Conv2d(hidden_dims[-1], out_channels=out_channels, kernel_size=ksize, padding=padding),
             nn.Tanh()
         )
 
