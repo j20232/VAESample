@@ -150,6 +150,11 @@ class VanillaVAE(BaseVAE):
         samples = self.decode(z)
         return samples
 
+    def sample_with_value(self, array, current_device: int, **kwargs) -> Tensor:
+        z = array.to(current_device)
+        samples = self.decode(z)
+        return samples
+
     def generate(self, x: Tensor, **kwargs) -> Tensor:
         """Returns the reconstructed image given an input image x
 

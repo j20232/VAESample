@@ -2,6 +2,7 @@ model_params:
   name: 'VanillaVAE'
   in_channels: 3
   latent_dim: 128
+  device: "cpu"
 
 exp_params:
   dataset: celeba

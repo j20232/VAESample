@@ -17,10 +17,11 @@ from models.types_ import *
 class VAEExperiment(pl.LightningModule):
 
     def __init__(self, n, vae_model: BaseVAE, params: dict):
+        # n: pytorch_lightning 0.8.5 contains bugs about arguments, this argument is to fix the bug
         super(VAEExperiment, self).__init__()
         self.model = vae_model
         self.params = params
-        self.current_device = None
+        self.current_device = params["device"] if torch.cuda.is_available else "cpu"
         RFB = "retain_first_backpass"
         self.hold_graph = False if RFB not in self.params.keys() else self.params[RFB]
 
@@ -93,16 +94,6 @@ class VAEExperiment(pl.LightningModule):
                           f"{self.logger.save_dir}{self.logger.name}/version_{self.logger.version}/"
                           f"recons_{self.logger.name}_{self.current_epoch}.png",
                           normalize=True, nrow=nrow)
-        try:
-            samples = self.model.sample(nrow ** 2, self.curr_device, labels=test_label)
-            vutils.save_image(samples.cpu().data,
-                              f"{self.logger.save_dir}{self.logger.name}/version_{self.logger.version}/"
-                              f"{self.logger.name}_{self.current_epoch}.png",
-                              normalize=True,
-                              nrow=nrow)
-        except:
-            pass
-
         del test_img, recons
 
     def configure_optimizers(self):

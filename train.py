@@ -31,7 +31,7 @@ if __name__ == '__main__':
         create_git_tag=False,
     )
     model = vae_models[config["model_params"]["name"]](**config["model_params"])
-    experiment = VAEExperiment(model,
+    experiment = VAEExperiment(0, model,
                                config['exp_params'])
 
     runner = Trainer(

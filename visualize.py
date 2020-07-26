@@ -1,9 +1,11 @@
 import yaml
 import argparse
 import tkinter as tk
-from PIL import Image, ImageTk
+import numpy as np
+from PIL import ImageTk
 from pathlib import Path
 
+from torchvision import transforms
 from experiment import VAEExperiment
 from models import *
 from utils import seed_everything
@@ -14,6 +16,7 @@ class LatentAdjustor(tk.Frame):
         super().__init__(master, width=width, height=height)
         self.width = width
         self.height = height
+        self.latent_num = latent_num
 
         # Create a canvas and a scroll bar
         self.scroll_bar = tk.Scrollbar(self, orient=tk.VERTICAL)
@@ -64,27 +67,26 @@ class LatentAdjustor(tk.Frame):
 
 
 class LatentVisualizer():
-    def __init__(self, title="LatentVisualizer", width=800, height=400):
+    def __init__(self, img, latent_num, title="LatentVisualizer", width=800, height=400):
         self.title = title
         self.width = width
         self.height = height
+        self.latent_num = latent_num
         self.root = tk.Tk()
         self.root.title(self.title)
         self.root.geometry(f"{self.width}x{self.height}")
-        self._set_image()
+        self._set_image(img)
 
         self.frame_canvas = tk.Canvas(self.root, bg="white")
         self.frame_canvas.place(x=int(self.width / 2), y=0, width=int(self.width / 2), height=self.height)
-        self.frame = LatentAdjustor(master=self.frame_canvas, latent_num=20, width=self.width / 2, height=self.height)
+        self.frame = LatentAdjustor(master=self.frame_canvas, latent_num=self.latent_num, width=self.width / 2, height=self.height)
         self.frame.place(x=0, y=0, relwidth=1.0, height=height)
 
-    def _set_image(self):
+    def _set_image(self, img):
         self.image_canvas = tk.Canvas(self.root, bg="white")
         self.image_canvas.place(x=0, y=0, width=int(self.width / 2), height=self.height)
 
         # tmp
-        path = "./logs/VanillaVAE/version_9/recons_VanillaVAE_9.png"
-        img = Image.open(path)
         img = img.resize((int(self.width / 2), self.height))
         self.img = ImageTk.PhotoImage(img)
         self.image_panel = tk.Label(self.image_canvas, image=self.img)
@@ -111,11 +113,11 @@ if __name__ == '__main__':
     ROOT_PATH = Path(".").resolve()
     check_point_dir = ROOT_PATH / "logs" / model_name / f"version_{args.version}" / "checkpoints"
     check_point_file = list(check_point_dir.glob("*"))[0]
-    print(check_point_file)
-    model = VAEExperiment.load_from_checkpoint(checkpoint_path=str(check_point_file),
-                                               vae_model=model, params=config["model_params"])
-    print(model)
-    assert False
-
-    visualizer = LatentVisualizer()
+    experiment = VAEExperiment.load_from_checkpoint(checkpoint_path=str(check_point_file),
+                                                    vae_model=model, params=config["model_params"])
+    z = torch.tensor(np.zeros((1, experiment.model.latent_dim), dtype=np.float32))
+    tensor = experiment.model.sample_with_value(z, "cpu")
+    tensor = (tensor + 1.0) / 2.0
+    img = transforms.ToPILImage()(tensor[0])
+    visualizer = LatentVisualizer(img, latent_num=experiment.model.latent_dim)
     visualizer.run()
