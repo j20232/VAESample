@@ -4,6 +4,7 @@ import tkinter as tk
 import numpy as np
 from PIL import ImageTk
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 from torchvision import transforms
 from experiment import VAEExperiment
@@ -12,8 +13,9 @@ from utils import seed_everything
 
 
 class LatentAdjustor(tk.Frame):
-    def __init__(self, master, latent_num, width=None, height=None):
-        super().__init__(master, width=width, height=height)
+    def __init__(self, parent_canvas, latent_num, width=None, height=None,
+                 img=None, image_canvas=None, image_panel=None, experiment=None):
+        super().__init__(parent_canvas, width=width, height=height)
         self.width = width
         self.height = height
         self.latent_num = latent_num
@@ -43,6 +45,10 @@ class LatentAdjustor(tk.Frame):
                                         from_=0.0, to=255.0, length=int(self.width / 2 * 0.8),
                                         command=self._scaled(i)))
             self.scales[i].pack(anchor=tk.NW, fill=tk.X, padx=(30, 30), pady=(0, 10))
+        self.img = img
+        self.image_canvas = image_canvas
+        self.image_panel = image_panel
+        self.experiment = experiment
 
     def _configure_interior(self, event=None):
         size = (self.interior.winfo_reqwidth(), self.interior.winfo_reqheight())
@@ -62,12 +68,21 @@ class LatentAdjustor(tk.Frame):
 
     def _scaled(self, i):
         def x(v):
-            print(i, v, self.vals[i].get())
+            values = np.array([(self.vals[i].get() - 128) / 255 for i in range(len(self.vals))], dtype=np.float32).reshape(1, -1)
+            z = torch.tensor(values)
+            tensor = self.experiment.model.sample_with_value(z, "cpu")
+            tensor = (tensor + 1.0) / 2.0
+            img = transforms.ToPILImage()(tensor[0])
+
+            img = img.resize((int(self.width / 2), self.height))
+            self.img = ImageTk.PhotoImage(img)
+            self.image_panel = tk.Label(self.image_canvas, image=self.img)
+            self.image_panel.pack(side="bottom", fill="both", expand="yes")
         return x
 
 
 class LatentVisualizer():
-    def __init__(self, img, latent_num, title="LatentVisualizer", width=800, height=400):
+    def __init__(self, experiment, latent_num, title="LatentVisualizer", width=800, height=400):
         self.title = title
         self.width = width
         self.height = height
@@ -75,18 +90,25 @@ class LatentVisualizer():
         self.root = tk.Tk()
         self.root.title(self.title)
         self.root.geometry(f"{self.width}x{self.height}")
-        self._set_image(img)
+        self.experiment = experiment
+        self._set_image()
 
         self.frame_canvas = tk.Canvas(self.root, bg="white")
         self.frame_canvas.place(x=int(self.width / 2), y=0, width=int(self.width / 2), height=self.height)
-        self.frame = LatentAdjustor(master=self.frame_canvas, latent_num=self.latent_num, width=self.width / 2, height=self.height)
+        self.frame = LatentAdjustor(parent_canvas=self.frame_canvas, latent_num=self.latent_num, width=self.width / 2, height=self.height,
+                                    img=self.img, image_canvas=self.image_canvas, image_panel=self.image_panel, experiment=self.experiment)
         self.frame.place(x=0, y=0, relwidth=1.0, height=height)
 
-    def _set_image(self, img):
+    def _set_image(self):
         self.image_canvas = tk.Canvas(self.root, bg="white")
         self.image_canvas.place(x=0, y=0, width=int(self.width / 2), height=self.height)
 
         # tmp
+        z = torch.tensor(np.zeros((1, self.experiment.model.latent_dim), dtype=np.float32))
+        tensor = self.experiment.model.sample_with_value(z, "cpu")
+        tensor = (tensor + 1.0) / 2.0
+        img = transforms.ToPILImage()(tensor[0])
+
         img = img.resize((int(self.width / 2), self.height))
         self.img = ImageTk.PhotoImage(img)
         self.image_panel = tk.Label(self.image_canvas, image=self.img)
@@ -115,9 +137,5 @@ if __name__ == '__main__':
     check_point_file = list(check_point_dir.glob("*"))[0]
     experiment = VAEExperiment.load_from_checkpoint(checkpoint_path=str(check_point_file),
                                                     vae_model=model, params=config["model_params"])
-    z = torch.tensor(np.zeros((1, experiment.model.latent_dim), dtype=np.float32))
-    tensor = experiment.model.sample_with_value(z, "cpu")
-    tensor = (tensor + 1.0) / 2.0
-    img = transforms.ToPILImage()(tensor[0])
-    visualizer = LatentVisualizer(img, latent_num=experiment.model.latent_dim)
+    visualizer = LatentVisualizer(experiment, latent_num=experiment.model.latent_dim)
     visualizer.run()
