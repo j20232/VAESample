@@ -11,8 +11,15 @@ $ poetry run pip install torch===1.5.1 torchvision===0.6.1 -f https://download.p
 
 ## Usage
 
+### Train
 ```sh
-$ poetry run python main.py -c configs/<config-file-name.yaml>
+$ poetry run python train.py -c configs/<config-file-name.yaml>
+```
+
+### Visualize
+
+```sh
+$ poetry run python visualize.py configs/<config-file-name.yaml>  9
 ```
 
 ## References

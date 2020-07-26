@@ -131,9 +131,9 @@ class VanillaVAE(BaseVAE):
 
         # KL divergence where both distribution follow Gaussian distributions
         # log_var = log(sigma ** 2)
-        kld_loss = -torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim=1), dim=0)
+        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim=1), dim=0)
         loss = recons_loss + kld_weight * kld_loss
-        return {"loss": loss, "Reconstruction_loss": recons_loss, "KLD": kld_loss}
+        return {"loss": loss, "Reconstruction_loss": recons_loss, "KLD": -kld_loss}
 
     def sample(self, num_samples: int, current_device: int, **kwargs) -> Tensor:
         """Samples from the latent space and return the corresponding image space map

@@ -16,7 +16,7 @@ from models.types_ import *
 
 class VAEExperiment(pl.LightningModule):
 
-    def __init__(self, vae_model: BaseVAE, params: dict):
+    def __init__(self, n, vae_model: BaseVAE, params: dict):
         super(VAEExperiment, self).__init__()
         self.model = vae_model
         self.params = params
