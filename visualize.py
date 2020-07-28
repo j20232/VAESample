@@ -77,10 +77,10 @@ class LatentAdjustor(tk.Frame):
             tensor = (tensor + 1.0) / 2.0
             img = transforms.ToPILImage()(tensor[0].detach().cpu())
 
-            img = img.resize((int(self.width / 2), self.height))
+            img = img.resize((int(self.width), int(self.height)))
             self.img = ImageTk.PhotoImage(img)
-            self.image_panel = tk.Label(self.image_canvas, image=self.img)
-            self.image_panel.pack(side="bottom", fill="both", expand="yes")
+            self.image_panel.configure(image=self.img)
+            self.image_panel.image = self.img
         return x
 
 
