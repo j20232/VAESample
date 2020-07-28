@@ -5,6 +5,7 @@
 .vscode/
 data/
 logs/
+Dataset/
 
 __pycache__/
 *.py[cod]
