@@ -7,6 +7,7 @@ WIP
 ```sh
 $ poetry install
 $ poetry run pip install torch===1.5.1 torchvision===0.6.1 -f https://download.pytorch.org/whl/torch_stable.html
+$ poetry run pip install pytorch_lightning test-tube
 ```
 
 ## Usage

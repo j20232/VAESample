@@ -9,6 +9,7 @@ from torchvision import transforms
 from torchvision.datasets import CelebA
 
 import pytorch_lightning as pl
+from pathlib import Path
 
 from models import BaseVAE
 from models.types_ import *
@@ -16,12 +17,11 @@ from models.types_ import *
 
 class VAEExperiment(pl.LightningModule):
 
-    def __init__(self, n, vae_model: BaseVAE, params: dict):
-        # n: pytorch_lightning 0.8.5 contains bugs about arguments, this argument is to fix the bug
+    def __init__(self, vae_model: BaseVAE, params: dict):
         super(VAEExperiment, self).__init__()
-        self.model = vae_model
         self.params = params
         self.current_device = params["device"] if torch.cuda.is_available else "cpu"
+        self.model = vae_model.to(self.current_device)
         RFB = "retain_first_backpass"
         self.hold_graph = False if RFB not in self.params.keys() else self.params[RFB]
 
@@ -38,7 +38,8 @@ class VAEExperiment(pl.LightningModule):
 
     def _step(self, batch, batch_idx, optimizer_idx=0, is_train=True):
         imgs, labels = batch
-        self.current_device = imgs.device
+        imgs = imgs.to(self.current_device)
+        labels = labels.to(self.current_device)
         results = self.forward(imgs, labels=labels)
         num_imgs = self.num_train_imgs if is_train else self.num_val_imgs
         return self.model.loss_fn(*results, M_N=self.params["batch_size"] / num_imgs, optimizer_idx=optimizer_idx, batch_idx=batch_idx)
