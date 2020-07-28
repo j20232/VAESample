@@ -17,7 +17,8 @@ from models.types_ import *
 
 class VAEExperiment(pl.LightningModule):
 
-    def __init__(self, vae_model: BaseVAE, params: dict):
+    def __init__(self, n, vae_model: BaseVAE, params: dict):
+        # n: to avoid pl bug
         super(VAEExperiment, self).__init__()
         self.params = params
         self.current_device = params["device"] if torch.cuda.is_available else "cpu"

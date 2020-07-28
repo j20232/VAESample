@@ -6,6 +6,8 @@ from PIL import ImageTk
 from pathlib import Path
 import matplotlib.pyplot as plt
 
+import pytorch_lightning as pl
+import torch
 from torchvision import transforms
 from experiment import VAEExperiment
 from models import *
@@ -14,8 +16,9 @@ from utils import seed_everything
 
 class LatentAdjustor(tk.Frame):
     def __init__(self, parent_canvas, latent_num, width=None, height=None,
-                 img=None, image_canvas=None, image_panel=None, experiment=None):
+                 img=None, image_canvas=None, image_panel=None, experiment=None, device="cpu"):
         super().__init__(parent_canvas, width=width, height=height)
+        self.device = device if torch.cuda.is_available() else "cpu"
         self.width = width
         self.height = height
         self.latent_num = latent_num
@@ -70,9 +73,9 @@ class LatentAdjustor(tk.Frame):
         def x(v):
             values = np.array([(self.vals[i].get() - 128) / 255 for i in range(len(self.vals))], dtype=np.float32).reshape(1, -1)
             z = torch.tensor(values)
-            tensor = self.experiment.model.sample_with_value(z, "cpu")
+            tensor = self.experiment.model.sample_with_value(z, self.device)
             tensor = (tensor + 1.0) / 2.0
-            img = transforms.ToPILImage()(tensor[0])
+            img = transforms.ToPILImage()(tensor[0].detach().cpu())
 
             img = img.resize((int(self.width / 2), self.height))
             self.img = ImageTk.PhotoImage(img)
@@ -82,7 +85,8 @@ class LatentAdjustor(tk.Frame):
 
 
 class LatentVisualizer():
-    def __init__(self, experiment, latent_num, title="LatentVisualizer", width=800, height=400):
+    def __init__(self, experiment, latent_num, title="LatentVisualizer", width=800, height=400, device="cpu"):
+        self.device = device
         self.title = title
         self.width = width
         self.height = height
@@ -96,7 +100,7 @@ class LatentVisualizer():
         self.frame_canvas = tk.Canvas(self.root, bg="white")
         self.frame_canvas.place(x=int(self.width / 2), y=0, width=int(self.width / 2), height=self.height)
         self.frame = LatentAdjustor(parent_canvas=self.frame_canvas, latent_num=self.latent_num, width=self.width / 2, height=self.height,
-                                    img=self.img, image_canvas=self.image_canvas, image_panel=self.image_panel, experiment=self.experiment)
+                                    img=self.img, image_canvas=self.image_canvas, image_panel=self.image_panel, experiment=self.experiment, device=self.device)
         self.frame.place(x=0, y=0, relwidth=1.0, height=height)
 
     def _set_image(self):
@@ -104,10 +108,10 @@ class LatentVisualizer():
         self.image_canvas.place(x=0, y=0, width=int(self.width / 2), height=self.height)
 
         # tmp
-        z = torch.tensor(np.zeros((1, self.experiment.model.latent_dim), dtype=np.float32))
-        tensor = self.experiment.model.sample_with_value(z, "cpu")
+        z = torch.tensor(np.zeros((1, self.experiment.model.latent_dim), dtype=np.float32)).to(self.device)
+        tensor = self.experiment.model.sample_with_value(z, self.device)
         tensor = (tensor + 1.0) / 2.0
-        img = transforms.ToPILImage()(tensor[0])
+        img = transforms.ToPILImage()(tensor[0].detach().cpu())
 
         img = img.resize((int(self.width / 2), self.height))
         self.img = ImageTk.PhotoImage(img)
@@ -136,6 +140,6 @@ if __name__ == '__main__':
     check_point_dir = ROOT_PATH / "logs" / model_name / f"version_{args.version}" / "checkpoints"
     check_point_file = list(check_point_dir.glob("*"))[0]
     experiment = VAEExperiment.load_from_checkpoint(checkpoint_path=str(check_point_file),
-                                                    vae_model=model, params=config["model_params"])
-    visualizer = LatentVisualizer(experiment, latent_num=experiment.model.latent_dim)
+                                                    vae_model=model, params=config["exp_params"])
+    visualizer = LatentVisualizer(experiment, latent_num=experiment.model.latent_dim, device=config["exp_params"]["device"])
     visualizer.run()
