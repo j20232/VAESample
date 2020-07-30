@@ -6,17 +6,22 @@ from models import BaseVAE
 from .types_ import *
 
 
-class VanillaVAE(BaseVAE):
+class ConditonalVAE(BaseVAE):
 
-    def __init__(self,
-                 in_channels: int, latent_dim: int, hidden_dims: List = None, out_channels=3,
-                 ksize=3, stride=2, padding=1, **kwargs) -> None:
-        super(VanillaVAE, self).__init__()
+    def __init__(self, in_channels: int, num_classes: int, latent_dim: int,
+                 hidden_dims: List = None, img_size=64, out_channels=3,
+                 ksize=3, stride=2, padding=1, **kwargs):
+        super(ConditonalVAE, self).__init__()
         self.latent_dim = latent_dim
-        self.have_label = False
+        self.img_size = img_size
+        self.num_classes = num_classes
+        self.have_label = True
         if hidden_dims is None:
             hidden_dims = [32, 64, 128, 256, 512]
         self.last_hdim = hidden_dims[-1]  # last dimension of hidden layers
+
+        self.embed_class = nn.Linear(num_classes, img_size * img_size)
+        self.embed_data = nn.Conv2d(in_channels, in_channels, kernel_size=1)
         self._build_encoder(in_channels, hidden_dims, ksize, stride, padding)
         self.fc_mu = nn.Linear(self.last_hdim * 4, latent_dim)
         self.fc_var = nn.Linear(self.last_hdim * 4, latent_dim)
@@ -24,6 +29,7 @@ class VanillaVAE(BaseVAE):
 
     def _build_encoder(self, in_channels: int, hidden_dims: int,
                        ksize=3, stride=2, padding=1):
+        in_channels += 1  # for label channel
         encoder_modules = []
         for h_dim in hidden_dims:
             encoder_modules.append(
@@ -39,7 +45,7 @@ class VanillaVAE(BaseVAE):
 
     def _build_decoder(self, latent_dim: int, hidden_dims: List[int], out_channels: int,
                        ksize=3, stride=2, padding=1, output_padding=1):
-        self.decoder_input = nn.Linear(latent_dim, self.last_hdim * 4)
+        self.decoder_input = nn.Linear(latent_dim + self.num_classes, self.last_hdim * 4)
         hidden_dims.reverse()
         decoder_modules = []
         for i in range(len(hidden_dims) - 1):
@@ -60,10 +66,17 @@ class VanillaVAE(BaseVAE):
             nn.Tanh()
         )
 
-    def forward(self, x: Tensor, **kwargs) -> List[Tensor]:
+    def forward(self, input: Tensor, **kwargs) -> List[Tensor]:
+        y = kwargs["labels"].float()
+        embedded_class = self.embed_class(y)
+        embedded_class = embedded_class.view(-1, self.img_size, self.img_size).unsqueeze(1)
+        embedded_input = self.embed_data(input)
+
+        x = torch.cat([embedded_input, embedded_class], dim=1)
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
-        return [self.decode(z), x, mu, log_var]
+        z = torch.cat([z, y], dim=1)
+        return [self.decode(z), input, mu, log_var]
 
     def encode(self, x: Tensor) -> List[Tensor]:
         """Encodes the input tensor by the encoder and returns the latent vectors
@@ -147,13 +160,17 @@ class VanillaVAE(BaseVAE):
         Returns:
             Tensor: samples
         """
+        y = kwargs["labels"].float()
         z = torch.randn(num_samples, self.latent_dim)
         z = z.to(current_device)
+        z = torch.cat([z, y], dim=1)
         samples = self.decode(z)
         return samples
 
     def sample_with_value(self, array, current_device: int, **kwargs) -> Tensor:
+        y = kwargs["labels"].float()
         z = array.to(current_device)
+        z = torch.cat([z, y], dim=1)
         samples = self.decode(z)
         return samples
 
@@ -166,4 +183,4 @@ class VanillaVAE(BaseVAE):
         Returns:
             Tensor: [B, C, H, W]
         """
-        return self.forward(x)[0]
+        return self.forward(x, **kwargs)[0]

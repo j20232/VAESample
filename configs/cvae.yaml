@@ -1,0 +1,27 @@
+model_params:
+  name: 'CVAE'
+  in_channels: 3
+  num_classes: 40
+  latent_dim: 128
+
+exp_params:
+  device: "cuda:0"
+  dataset: celeba
+  data_path: "./Dataset/image/"
+  download: True
+  img_size: 64
+  batch_size: 144 # Better to have a square number
+  LR: 0.005
+  weight_decay: 0.0
+  scheduler_gamma: 0.95
+
+trainer_params:
+  default_root_dir: "./logs/"
+  gpus: 1
+  max_epochs: 40
+  min_epochs: 1
+
+logging_params:
+  save_dir: "logs/"
+  name: "CVAE"
+  manual_seed: 1265
