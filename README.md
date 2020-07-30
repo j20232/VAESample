@@ -17,11 +17,17 @@ $ poetry run pip install pytorch_lightning test-tube
 $ poetry run python train.py -c configs/<config-file-name.yaml>
 ```
 
+e.g. `poetry run python train.py -c configs/vae.yaml`
+
 ### Visualize
 
 ```sh
-$ poetry run python visualize.py configs/<config-file-name.yaml>  9
+$ poetry run python visualize.py configs/<config-file-name.yaml>  <experiment_idx>
 ```
+
+e.g. `poetry run python visualize.py configs/vae.yaml 1`
+
+ImageVisualizer shows latent variables sorted with each importance.
 
 ## References
 
