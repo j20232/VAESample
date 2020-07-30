@@ -28,7 +28,7 @@ $ poetry run python visualize.py configs/<config-file-name.yaml>  <experiment_id
 e.g. `poetry run python visualize.py configs/vae.yaml 1`
 
 ImageVisualizer shows latent variables sorted with each importance.  
-In this example, `45` means the index of latent variables, `(105.455)` means the importance, `0.0` means the variable.  
+In this example, `45` means the index of latent variables, `(105.455)` means the importance and `0.0` means the variable.  
 
 
 You can adjust latent variables as follow:
