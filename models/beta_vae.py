@@ -18,7 +18,7 @@ class BetaVAE(BaseVAE):
         self.beta = beta
         self.gamma = gamma
         self.loss_type = loss_type
-        self.max_capacity = max_capacity
+        self.max_capacity = torch.tensor(float(max_capacity))
         self.capacity_max_iter = capacity_max_iter
         self.have_label = False
         if hidden_dims is None:
@@ -146,7 +146,7 @@ class BetaVAE(BaseVAE):
             loss = recons_loss + self.beta * kld_weight * kld_loss
         elif self.loss_type == "B":  # https://arxiv.org/pdf/1804.03599.pdf
             self.max_capacity = self.max_capacity.to(x.device)
-            C = torch.clamp(self.max_capacity / self.capacity_max_iter * self.num_iter, 0, self.max_capacity.data[0])
+            C = torch.clamp(self.max_capacity / self.capacity_max_iter * self.num_iter, 0, self.max_capacity)
             loss = recons_loss + self.gamma * kld_weight * (kld_loss - C).abs()
         else:
             raise NotImplementedError("Undefined loss")
