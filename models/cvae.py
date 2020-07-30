@@ -67,7 +67,7 @@ class ConditonalVAE(BaseVAE):
         )
 
     def forward(self, input: Tensor, **kwargs) -> List[Tensor]:
-        y = kwargs["labels"].float()
+        y = kwargs["labels"].float()  # [batch_size, num_classes]
         embedded_class = self.embed_class(y)
         embedded_class = embedded_class.view(-1, self.img_size, self.img_size).unsqueeze(1)
         embedded_input = self.embed_data(input)
